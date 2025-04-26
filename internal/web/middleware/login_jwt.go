@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"ddd_demo/internal/web"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"log"
 	"net/http"
 	"strings"
