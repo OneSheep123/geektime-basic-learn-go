@@ -3,10 +3,13 @@ package web
 import (
 	"ddd_demo/internal/domain"
 	"ddd_demo/internal/service"
+	ijwt "ddd_demo/internal/web/jwt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+	"log"
 	"net/http"
 	"time"
 )
@@ -19,18 +22,22 @@ const (
 )
 
 type UserHandler struct {
+	ijwt.Handler
 	emailRexExp    *regexp.Regexp
 	passwordRexExp *regexp.Regexp
 	svc            service.UserService
 	codeSvc        service.CodeService
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService,
+	hdl ijwt.Handler,
+	codeSvc service.CodeService) *UserHandler {
 	return &UserHandler{
 		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
 		svc:            svc,
 		codeSvc:        codeSvc,
+		Handler:        hdl,
 	}
 }
 
@@ -45,10 +52,12 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	// POST /users/login
 	//ug.POST("/login", h.Login)
 	ug.POST("/login", h.LoginJWT)
+	ug.POST("/logout", h.LogoutJWT)
 	// POST /users/edit
 	ug.POST("/edit", h.Edit)
 	// GET /users/profile
 	ug.GET("/profile", h.Profile)
+	ug.GET("/refresh_token", h.RefreshToken)
 
 	// 手机验证码登录相关功能
 	ug.POST("/login_sms/code/send", h.SendSMSLoginCode)
@@ -70,7 +79,13 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "系统异常",
+			//Msg: err.Error(),
 		})
+		zap.L().Error("手机验证码验证失败",
+			// 在生产环境绝对不能打
+			// 开发环境你可以随便打
+			//zap.String("phone", req.Phone),
+			zap.Error(err))
 		return
 	}
 	if !ok {
@@ -88,7 +103,11 @@ func (h *UserHandler) LoginSMS(ctx *gin.Context) {
 		})
 		return
 	}
-	h.setJWTToken(ctx, u.Id)
+	err = h.SetLoginToken(ctx, u.Id)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "登录成功",
 	})
@@ -117,6 +136,10 @@ func (h *UserHandler) SendSMSLoginCode(ctx *gin.Context) {
 			Msg: "发送成功",
 		})
 	case service.ErrCodeSendTooMany:
+		// 事实上，防不住有人不知道怎么触发了
+		// 少数这种错误，是可以接受的
+		// 但是频繁出现，就代表有人在搞你的系统
+		zap.L().Warn("频繁发送验证码")
 		ctx.JSON(http.StatusOK, Result{
 			Code: 4,
 			Msg:  "短信发送太频繁，请稍后再试",
@@ -127,6 +150,7 @@ func (h *UserHandler) SendSMSLoginCode(ctx *gin.Context) {
 			Msg:  "系统错误",
 		})
 		// 补日志的
+		log.Println(err)
 	}
 }
 
@@ -193,7 +217,11 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	u, err := h.svc.Login(ctx, req.Email, req.Password)
 	switch err {
 	case nil:
-		h.setJWTToken(ctx, u.Id)
+		err = h.SetLoginToken(ctx, u.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
 		ctx.String(http.StatusOK, "登录成功")
 	case service.ErrInvalidUserOrPassword:
 		ctx.String(http.StatusOK, "用户名或者密码不对")
@@ -202,22 +230,13 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	}
 }
 
-func (h *UserHandler) setJWTToken(ctx *gin.Context, uid int64) {
-	uc := UserClaims{
-		Uid:       uid,
-		UserAgent: ctx.GetHeader("User-Agent"),
-		RegisteredClaims: jwt.RegisteredClaims{
-			// 1 分钟过期
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
-	tokenStr, err := token.SignedString(JWTKey)
-	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
-	}
-	ctx.Header("x-jwt-token", tokenStr)
-}
+//func (h *UserHandler) Logout(ctx *gin.Context) {
+//	sess := sessions.Default(ctx)
+//	sess.Options(sessions.Options{
+//		MaxAge: -1,
+//	})
+//	sess.Save()
+//}
 
 func (h *UserHandler) Login(ctx *gin.Context) {
 	type Req struct {
@@ -266,7 +285,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	}
 	//sess := sessions.Default(ctx)
 	//sess.Get("uid")
-	uc, ok := ctx.MustGet("user").(UserClaims)
+	uc, ok := ctx.MustGet("user").(ijwt.UserClaims)
 	if !ok {
 		//ctx.String(http.StatusOK, "系统错误")
 		ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -297,7 +316,7 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	//ctx.String(http.StatusOK, "这是 profile")
 	// 嵌入一段刷新过期时间的代码
 
-	uc, ok := ctx.MustGet("user").(UserClaims)
+	uc, ok := ctx.MustGet("user").(ijwt.UserClaims)
 	if !ok {
 		//ctx.String(http.StatusOK, "系统错误")
 		ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -322,10 +341,44 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	})
 }
 
-var JWTKey = []byte("k6CswdUm77WKcbM68UQUuxVsHSpTCwgK")
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	// 约定，前端在 Authorization 里面带上这个 refresh_token
+	tokenStr := h.ExtractToken(ctx)
+	var rc ijwt.RefreshClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (interface{}, error) {
+		return ijwt.RCJWTKey, nil
+	})
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if token == nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	UserAgent string
+	err = h.CheckSession(ctx, rc.Ssid)
+	if err != nil {
+		// token 无效或者 redis 有问题
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = h.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "OK",
+	})
+}
+
+func (h *UserHandler) LogoutJWT(ctx *gin.Context) {
+	err := h.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "退出登录成功"})
 }

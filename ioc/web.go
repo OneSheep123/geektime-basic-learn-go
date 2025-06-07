@@ -1,8 +1,13 @@
 package ioc
 
 import (
+	"context"
 	"ddd_demo/internal/web"
+	ijwt "ddd_demo/internal/web/jwt"
+	"ddd_demo/internal/web/middleware"
 	"ddd_demo/pkg/ginx/middleware/ratelimit"
+	"ddd_demo/pkg/limiter"
+	"ddd_demo/pkg/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -20,14 +25,20 @@ import (
 //	return server
 //}
 
-func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc,
+	userHdl *web.UserHandler,
+	artHdl *web.ArticleHandler,
+	wechatHdl *web.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
 	userHdl.RegisterRoutes(server)
+	wechatHdl.RegisterRoutes(server)
+	artHdl.RegisterRoutes(server)
 	return server
 }
 
-func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitGinMiddlewares(redisClient redis.Cmdable,
+	hdl ijwt.Handler, l logger.LoggerV1) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		cors.New(cors.Config{
 			//AllowAllOrigins: true,
@@ -36,7 +47,7 @@ func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 
 			AllowHeaders: []string{"Content-Type", "Authorization"},
 			// 这个是允许前端访问你的后端响应中带的头部
-			ExposeHeaders: []string{"x-jwt-token"},
+			ExposeHeaders: []string{"x-jwt-token", "x-refresh-token"},
 			//AllowHeaders: []string{"content-type"},
 			//AllowMethods: []string{"POST"},
 			AllowOriginFunc: func(origin string) bool {
@@ -51,7 +62,10 @@ func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 		func(ctx *gin.Context) {
 			println("这是我的 Middleware")
 		},
-		ratelimit.NewBuilder(redisClient, time.Second, 1000).Build(),
-		//(&middleware.LoginJWTMiddlewareBuilder{}).CheckLogin(),
+		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 1000)).Build(),
+		middleware.NewLogMiddlewareBuilder(func(ctx context.Context, al middleware.AccessLog) {
+			l.Debug("", logger.Field{Key: "req", Val: al})
+		}).AllowReqBody().AllowRespBody().Build(),
+		middleware.NewLoginJWTMiddlewareBuilder(hdl).CheckLogin(),
 	}
 }

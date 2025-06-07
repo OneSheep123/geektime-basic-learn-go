@@ -30,6 +30,9 @@ func (m *LoginMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		}
 
 		now := time.Now()
+		//ctx.Next()// 执行业务
+		// 在执行业务之后搞点什么
+		//duration := time.Now().Sub(now)
 
 		// 我怎么知道，要刷新了呢？
 		// 假如说，我们的策略是每分钟刷一次，我怎么知道，已经过了一分钟？
