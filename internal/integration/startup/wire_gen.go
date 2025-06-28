@@ -11,6 +11,8 @@ import (
 	"ddd_demo/internal/repository/cache"
 	"ddd_demo/internal/repository/dao"
 	"ddd_demo/internal/service"
+	"ddd_demo/internal/service/sms"
+	"ddd_demo/internal/service/sms/async"
 	"ddd_demo/internal/web"
 	"ddd_demo/internal/web/jwt"
 	"ddd_demo/ioc"
@@ -39,11 +41,24 @@ func InitWebServer() *gin.Engine {
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewCachedArticleRepository(articleDAO, userRepository, articleCache)
 	articleService := service.NewArticleService(articleRepository)
-	articleHandler := web.NewArticleHandler(loggerV1, articleService)
+	interactiveDAO := dao.NewGORMInteractiveDAO(db)
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
+	interactiveService := service.NewInteractiveService(interactiveRepository)
+	articleHandler := web.NewArticleHandler(loggerV1, articleService, interactiveService)
 	wechatService := InitWechatService(loggerV1)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, handler, userService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler, oAuth2WechatHandler)
 	return engine
+}
+
+func InitAsyncSmsService(svc sms.Service) *async.Service {
+	db := InitDB()
+	asyncSmsDAO := dao.NewGORMAsyncSmsDAO(db)
+	asyncSmsRepository := repository.NewAsyncSMSRepository(asyncSmsDAO)
+	loggerV1 := InitLogger()
+	asyncService := async.NewService(svc, asyncSmsRepository, loggerV1)
+	return asyncService
 }
 
 func InitArticleHandler(dao2 dao.ArticleDAO) *web.ArticleHandler {
@@ -56,8 +71,23 @@ func InitArticleHandler(dao2 dao.ArticleDAO) *web.ArticleHandler {
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewCachedArticleRepository(dao2, userRepository, articleCache)
 	articleService := service.NewArticleService(articleRepository)
-	articleHandler := web.NewArticleHandler(loggerV1, articleService)
+	interactiveDAO := dao.NewGORMInteractiveDAO(db)
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
+	interactiveService := service.NewInteractiveService(interactiveRepository)
+	articleHandler := web.NewArticleHandler(loggerV1, articleService, interactiveService)
 	return articleHandler
+}
+
+func InitInteractiveService() service.InteractiveService {
+	db := InitDB()
+	interactiveDAO := dao.NewGORMInteractiveDAO(db)
+	loggerV1 := InitLogger()
+	cmdable := InitRedis()
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
+	interactiveService := service.NewInteractiveService(interactiveRepository)
+	return interactiveService
 }
 
 // wire.go:
@@ -69,3 +99,5 @@ var thirdPartySet = wire.NewSet(
 var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewCachedUserRepository, service.NewUserService)
 
 var articlSvcProvider = wire.NewSet(repository.NewCachedArticleRepository, cache.NewArticleRedisCache, dao.NewArticleGORMDAO, service.NewArticleService)
+
+var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO, cache.NewInteractiveRedisCache, repository.NewCachedInteractiveRepository, service.NewInteractiveService)

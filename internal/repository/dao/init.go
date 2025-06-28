@@ -9,9 +9,16 @@ import (
 	"time"
 )
 
+// InitTables 初始化表结构
 func InitTables(db *gorm.DB) error {
 	// 严格来说，这个不是优秀实践
-	return db.AutoMigrate(&User{}, &Article{}, &PublishedArticle{})
+	return db.AutoMigrate(&User{},
+		&Article{},
+		&PublishedArticle{},
+		&Interactive{},
+		&UserLikeBiz{},
+		&UserCollectionBiz{},
+		&AsyncSms{})
 }
 
 func InitCollection(mdb *mongo.Database) error {

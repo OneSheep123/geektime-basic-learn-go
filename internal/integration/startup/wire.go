@@ -7,6 +7,8 @@ import (
 	"ddd_demo/internal/repository/cache"
 	"ddd_demo/internal/repository/dao"
 	"ddd_demo/internal/service"
+	"ddd_demo/internal/service/sms"
+	"ddd_demo/internal/service/sms/async"
 	"ddd_demo/internal/web"
 	ijwt "ddd_demo/internal/web/jwt"
 	"ddd_demo/ioc"
@@ -30,11 +32,18 @@ var articlSvcProvider = wire.NewSet(
 	dao.NewArticleGORMDAO,
 	service.NewArticleService)
 
+var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
+	cache.NewInteractiveRedisCache,
+	repository.NewCachedInteractiveRepository,
+	service.NewInteractiveService,
+)
+
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		thirdPartySet,
 		userSvcProvider,
 		articlSvcProvider,
+		interactiveSvcSet,
 		// cache 部分
 		cache.NewCodeCache,
 
@@ -57,13 +66,27 @@ func InitWebServer() *gin.Engine {
 	return gin.Default()
 }
 
+func InitAsyncSmsService(svc sms.Service) *async.Service {
+	wire.Build(thirdPartySet, repository.NewAsyncSMSRepository,
+		dao.NewGORMAsyncSmsDAO,
+		async.NewService,
+	)
+	return &async.Service{}
+}
+
 func InitArticleHandler(dao dao.ArticleDAO) *web.ArticleHandler {
 	wire.Build(
 		thirdPartySet,
 		userSvcProvider,
+		interactiveSvcSet,
 		repository.NewCachedArticleRepository,
 		cache.NewArticleRedisCache,
 		service.NewArticleService,
 		web.NewArticleHandler)
 	return &web.ArticleHandler{}
+}
+
+func InitInteractiveService() service.InteractiveService {
+	wire.Build(thirdPartySet, interactiveSvcSet)
+	return service.NewInteractiveService(nil)
 }
