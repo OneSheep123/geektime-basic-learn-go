@@ -3,21 +3,24 @@
 package startup
 
 import (
-	"ddd_demo/internal/repository"
-	"ddd_demo/internal/repository/cache"
-	"ddd_demo/internal/repository/dao"
-	"ddd_demo/internal/service"
-	"ddd_demo/internal/service/sms"
-	"ddd_demo/internal/service/sms/async"
-	"ddd_demo/internal/web"
-	ijwt "ddd_demo/internal/web/jwt"
-	"ddd_demo/ioc"
+	"gitee.com/geekbang/basic-go/webook/internal/events/article"
+	"gitee.com/geekbang/basic-go/webook/internal/repository"
+	"gitee.com/geekbang/basic-go/webook/internal/repository/cache"
+	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
+	"gitee.com/geekbang/basic-go/webook/internal/service"
+	"gitee.com/geekbang/basic-go/webook/internal/service/sms"
+	"gitee.com/geekbang/basic-go/webook/internal/service/sms/async"
+	"gitee.com/geekbang/basic-go/webook/internal/web"
+	ijwt "gitee.com/geekbang/basic-go/webook/internal/web/jwt"
+	"gitee.com/geekbang/basic-go/webook/ioc"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
 
 var thirdPartySet = wire.NewSet( // 第三方依赖
 	InitRedis, InitDB,
+	InitSaramaClient,
+	InitSyncProducer,
 	InitLogger)
 
 var userSvcProvider = wire.NewSet(
@@ -49,6 +52,8 @@ func InitWebServer() *gin.Engine {
 
 		// repository 部分
 		repository.NewCodeRepository,
+
+		article.NewSaramaSyncProducer,
 
 		// Service 部分
 		ioc.InitSMSService,
@@ -82,6 +87,7 @@ func InitArticleHandler(dao dao.ArticleDAO) *web.ArticleHandler {
 		repository.NewCachedArticleRepository,
 		cache.NewArticleRedisCache,
 		service.NewArticleService,
+		article.NewSaramaSyncProducer,
 		web.NewArticleHandler)
 	return &web.ArticleHandler{}
 }

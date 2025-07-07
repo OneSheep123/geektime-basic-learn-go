@@ -7,6 +7,7 @@
 package startup
 
 import (
+	"ddd_demo/internal/events/article"
 	"ddd_demo/internal/repository"
 	"ddd_demo/internal/repository/cache"
 	"ddd_demo/internal/repository/dao"
@@ -40,7 +41,10 @@ func InitWebServer() *gin.Engine {
 	articleDAO := dao.NewArticleGORMDAO(db)
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewCachedArticleRepository(articleDAO, userRepository, articleCache)
-	articleService := service.NewArticleService(articleRepository)
+	client := InitSaramaClient()
+	syncProducer := InitSyncProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, producer)
 	interactiveDAO := dao.NewGORMInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
@@ -70,7 +74,10 @@ func InitArticleHandler(dao2 dao.ArticleDAO) *web.ArticleHandler {
 	userRepository := repository.NewCachedUserRepository(userDAO, userCache)
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewCachedArticleRepository(dao2, userRepository, articleCache)
-	articleService := service.NewArticleService(articleRepository)
+	client := InitSaramaClient()
+	syncProducer := InitSyncProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, producer)
 	interactiveDAO := dao.NewGORMInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
@@ -94,6 +101,8 @@ func InitInteractiveService() service.InteractiveService {
 
 var thirdPartySet = wire.NewSet(
 	InitRedis, InitDB,
+	InitSaramaClient,
+	InitSyncProducer,
 	InitLogger)
 
 var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewCachedUserRepository, service.NewUserService)
