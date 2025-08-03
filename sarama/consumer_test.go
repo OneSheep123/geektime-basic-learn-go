@@ -47,7 +47,6 @@ func (c ConsumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	msgs := claim.Messages()
 	const batchSize = 10
 	for {
-		log.Println("一个批次开始")
 		batch := make([]*sarama.ConsumerMessage, 0, batchSize)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		var done = false

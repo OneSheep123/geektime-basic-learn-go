@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"ddd_demo/internal/integration/startup"
-	"ddd_demo/internal/web"
+	"ddd_demo/pkg/ginx"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -31,7 +31,7 @@ func TestUserHandler_SendSMSCode(t *testing.T) {
 		phone string
 
 		wantCode int
-		wantBody web.Result
+		wantBody ginx.Result
 	}{
 		{
 			name: "发送成功的用例",
@@ -53,7 +53,7 @@ func TestUserHandler_SendSMSCode(t *testing.T) {
 			},
 			phone:    "15212345678",
 			wantCode: http.StatusOK,
-			wantBody: web.Result{
+			wantBody: ginx.Result{
 				Msg: "发送成功",
 			},
 		},
@@ -64,7 +64,7 @@ func TestUserHandler_SendSMSCode(t *testing.T) {
 			},
 			after:    func(t *testing.T) {},
 			wantCode: http.StatusOK,
-			wantBody: web.Result{
+			wantBody: ginx.Result{
 				Code: 4,
 				Msg:  "请输入手机号码",
 			},
@@ -88,7 +88,7 @@ func TestUserHandler_SendSMSCode(t *testing.T) {
 			},
 			phone:    "15212345678",
 			wantCode: http.StatusOK,
-			wantBody: web.Result{
+			wantBody: ginx.Result{
 				Code: 4,
 				Msg:  "短信发送太频繁，请稍后再试",
 			},
@@ -112,7 +112,7 @@ func TestUserHandler_SendSMSCode(t *testing.T) {
 			},
 			phone:    "15212345678",
 			wantCode: http.StatusOK,
-			wantBody: web.Result{
+			wantBody: ginx.Result{
 				Code: 5,
 				Msg:  "系统错误",
 			},
@@ -139,7 +139,7 @@ func TestUserHandler_SendSMSCode(t *testing.T) {
 			if tc.wantCode != http.StatusOK {
 				return
 			}
-			var res web.Result
+			var res ginx.Result
 			err = json.NewDecoder(recorder.Body).Decode(&res)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantBody, res)

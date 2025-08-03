@@ -6,6 +6,7 @@ import (
 	"ddd_demo/internal/service"
 	svcmocks "ddd_demo/internal/service/mocks"
 	ijwt "ddd_demo/internal/web/jwt"
+	"ddd_demo/pkg/ginx"
 	"ddd_demo/pkg/logger"
 	"encoding/json"
 	"errors"
@@ -24,7 +25,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 
 		reqBody  string
 		wantCode int
-		wantRes  Result
+		wantRes  ginx.Result
 	}{
 		{
 			name: "新建并且发表成功",
@@ -46,7 +47,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 }
 `,
 			wantCode: 200,
-			wantRes: Result{
+			wantRes: ginx.Result{
 				// 原本是 int64的，但是因为 Data 是any，所以在反序列化的时候，
 				// 用的 float64
 				Data: float64(1),
@@ -74,7 +75,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 }
 `,
 			wantCode: 200,
-			wantRes: Result{
+			wantRes: ginx.Result{
 				// 原本是 int64的，但是因为 Data 是any，所以在反序列化的时候，
 				// 用的 float64
 				Data: float64(1),
@@ -117,7 +118,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 }
 `,
 			wantCode: 200,
-			wantRes: Result{
+			wantRes: ginx.Result{
 				// 原本是 int64的，但是因为 Data 是any，所以在反序列化的时候，
 				// 用的 float64
 				Msg:  "系统错误",
@@ -158,7 +159,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 			if recorder.Code != http.StatusOK {
 				return
 			}
-			var res Result
+			var res ginx.Result
 			err = json.NewDecoder(recorder.Body).Decode(&res)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantRes, res)
