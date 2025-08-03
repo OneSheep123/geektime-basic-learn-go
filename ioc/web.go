@@ -4,10 +4,12 @@ import (
 	"ddd_demo/internal/web"
 	ijwt "ddd_demo/internal/web/jwt"
 	"ddd_demo/internal/web/middleware"
+	"ddd_demo/pkg/ginx"
 	"ddd_demo/pkg/ginx/middleware/prometheus"
 	"ddd_demo/pkg/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	prometheus2 "github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
@@ -43,6 +45,12 @@ func InitGinMiddlewares(redisClient redis.Cmdable,
 		Name:      "gin_http",
 		Help:      "统计 GIN 的HTTP接口数据",
 	}
+	ginx.InitCounter(prometheus2.CounterOpts{
+		Namespace: "geektime_daming",
+		Subsystem: "webook",
+		Name:      "biz_code",
+		Help:      "统计业务错误码",
+	})
 	return []gin.HandlerFunc{
 		cors.New(cors.Config{
 			//AllowAllOrigins: true,
