@@ -3,9 +3,10 @@ package dao
 import (
 	"context"
 	"errors"
+	"time"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"time"
 )
 
 //go:generate mockgen -source=./article.go -package=daomocks -destination=./mocks/article.mock.go ArticleDAO
@@ -17,6 +18,7 @@ type ArticleDAO interface {
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
 	GetById(ctx context.Context, id int64) (Article, error)
 	GetPubById(ctx context.Context, id int64) (PublishedArticle, error)
+	ListPub(ctx context.Context, start time.Time, offset, limit int) ([]PublishedArticle, error)
 }
 
 type ArticleGORMDAO struct {
@@ -28,6 +30,17 @@ func (a *ArticleGORMDAO) GetPubById(ctx context.Context, id int64) (PublishedArt
 	err := a.db.WithContext(ctx).
 		Where("id = ?", id).
 		First(&res).Error
+	return res, err
+}
+
+func (a *ArticleGORMDAO) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]PublishedArticle, error) {
+	var res []PublishedArticle
+	const ArticleStatusPublished = 2
+	err := a.db.WithContext(ctx).
+		Where("utime < ? AND status = ?",
+			start.UnixMilli(), ArticleStatusPublished).
+		Offset(offset).Limit(limit).
+		Find(&res).Error
 	return res, err
 }
 

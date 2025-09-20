@@ -4,15 +4,18 @@ import (
 	"context"
 	"ddd_demo/internal/domain"
 	"ddd_demo/internal/repository"
+
 	"golang.org/x/sync/errgroup"
 )
 
+//go:generate mockgen -source=./interactive.go -package=svcmocks -destination=./mocks/interactive.mock.go InteractiveService
 type InteractiveService interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	Like(c context.Context, biz string, id int64, uid int64) error
 	CancelLike(c context.Context, biz string, id int64, uid int64) error
 	Collect(ctx context.Context, biz string, bizId, cid, uid int64) error
 	Get(ctx context.Context, biz string, id int64, uid int64) (domain.Interactive, error)
+	GetByIds(ctx context.Context, biz string, ids []int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveService struct {
@@ -57,4 +60,17 @@ func NewInteractiveService(repo repository.InteractiveRepository) InteractiveSer
 
 func (i *interactiveService) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {
 	return i.repo.IncrReadCnt(ctx, biz, bizId)
+}
+
+func (i *interactiveService) GetByIds(ctx context.Context,
+	biz string, ids []int64) (map[int64]domain.Interactive, error) {
+	intrs, err := i.repo.GetByIds(ctx, biz, ids)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64]domain.Interactive, len(intrs))
+	for _, intr := range intrs {
+		res[intr.BizId] = intr
+	}
+	return res, nil
 }

@@ -7,6 +7,7 @@ import (
 	"ddd_demo/internal/repository"
 	"ddd_demo/pkg/logger"
 	"errors"
+	"time"
 )
 
 //go:generate mockgen -source=./article.go -package=svcmocks -destination=./mocks/article.mock.go ArticleService
@@ -17,6 +18,7 @@ type ArticleService interface {
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
 	GetPubById(ctx context.Context, id, uid int64) (domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error)
 }
 
 type articleService struct {
@@ -128,4 +130,9 @@ func (a *articleService) Save(ctx context.Context, art domain.Article) (int64, e
 		return art.Id, err
 	}
 	return a.repo.Create(ctx, art)
+}
+
+func (a *articleService) ListPub(ctx context.Context,
+	start time.Time, offset, limit int) ([]domain.Article, error) {
+	return a.repo.ListPub(ctx, start, offset, limit)
 }

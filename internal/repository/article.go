@@ -5,9 +5,10 @@ import (
 	"ddd_demo/internal/domain"
 	"ddd_demo/internal/repository/cache"
 	"ddd_demo/internal/repository/dao"
+	"time"
+
 	"github.com/ecodeclub/ekit/slice"
 	"gorm.io/gorm"
-	"time"
 )
 
 //go:generate mockgen -source=./article.go -package=repomocks -destination=./mocks/article.mock.go ArticleRepository
@@ -19,6 +20,7 @@ type ArticleRepository interface {
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
 	GetPubById(ctx context.Context, id int64) (domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -256,6 +258,20 @@ func NewCachedArticleRepositoryV2(
 		readerDAO: readerDAO,
 		authorDAO: authorDAO,
 	}
+}
+
+func (c *CachedArticleRepository) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error) {
+	arts, err := c.dao.ListPub(ctx, start, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	// 将已发布文章的DAO模型转换为领域模型
+	// 使用slice.Map进行批量转换,提高代码复用性
+	// 注意:这里需要先将PublishedArticle转为Article,再转为domain.Article
+	return slice.Map[dao.PublishedArticle, domain.Article](arts,
+		func(idx int, src dao.PublishedArticle) domain.Article {
+			return c.toDomain(dao.Article(src))
+		}), nil
 }
 
 func (c *CachedArticleRepository) toEntity(art domain.Article) dao.Article {
