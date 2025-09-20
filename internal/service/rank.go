@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"ddd_demo/internal/domain"
+	"ddd_demo/internal/repository"
 	"errors"
 	"math"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 type RankService interface {
 	TopN(ctx context.Context) error
+	GetTopN(ctx context.Context) ([]domain.Article, error)
 }
 
 type BatchRankingService struct {
@@ -20,7 +22,13 @@ type BatchRankingService struct {
 	artSvc    ArticleService
 	batchSize int
 	scoreFunc func(likeCnt int64, utime time.Time) float64
-	n         int
+	n         int // topN堆容量
+
+	repo repository.RankingRepository
+}
+
+func (b *BatchRankingService) GetTopN(ctx context.Context) ([]domain.Article, error) {
+	return b.repo.GetTopN(ctx)
 }
 
 func NewBatchRankingService(intrSvc InteractiveService, artSvc ArticleService) RankService {
@@ -38,7 +46,13 @@ func NewBatchRankingService(intrSvc InteractiveService, artSvc ArticleService) R
 }
 
 func (b *BatchRankingService) TopN(ctx context.Context) error {
-	return nil
+	arts, err := b.topN(ctx)
+	if err != nil {
+		return err
+	}
+	// 最终是要放到缓存里面的
+	// 存到缓存里面
+	return b.repo.ReplaceTopN(ctx, arts)
 }
 
 func (b *BatchRankingService) topN(ctx context.Context) ([]domain.Article, error) {
