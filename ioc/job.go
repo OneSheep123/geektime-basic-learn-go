@@ -4,13 +4,15 @@ import (
 	"ddd_demo/internal/job"
 	"ddd_demo/internal/service"
 	"ddd_demo/pkg/logger"
+	"time"
+
+	rlock "github.com/gotomicro/redis-lock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron/v3"
-	"time"
 )
 
-func InitRankingJob(svc service.RankService) *job.RankingJob {
-	return job.NewRankingJob(svc, time.Second*30)
+func InitRankingJob(svc service.RankService, l logger.LoggerV1, client *rlock.Client) *job.RankingJob {
+	return job.NewRankingJob(svc, l, client, time.Second*30)
 }
 
 func InitJobs(l logger.LoggerV1, rjob *job.RankingJob) *cron.Cron {

@@ -18,10 +18,11 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
+	github.com/gotomicro/redis-lock v0.0.3
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/lithammer/shortuuid/v4 v4.2.0
 	github.com/prometheus/client_golang v1.17.0
-	github.com/redis/go-redis/v9 v9.2.1
+	github.com/redis/go-redis/v9 v9.3.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1

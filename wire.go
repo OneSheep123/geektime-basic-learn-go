@@ -11,6 +11,7 @@ import (
 	"ddd_demo/internal/web"
 	ijwt "ddd_demo/internal/web/jwt"
 	"ddd_demo/ioc"
+
 	"github.com/google/wire"
 )
 
@@ -33,6 +34,7 @@ func InitWebServer() *App {
 		ioc.InitLogger,
 		ioc.InitSaramaClient,
 		ioc.InitSyncProducer,
+		ioc.InitRlockClient,
 		// DAO 部分
 		dao.NewUserDAO,
 		dao.NewArticleGORMDAO,
