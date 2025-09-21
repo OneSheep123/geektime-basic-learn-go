@@ -2,11 +2,12 @@ package dao
 
 import (
 	"context"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/gorm"
-	"time"
 )
 
 // InitTables 初始化表结构
@@ -18,7 +19,9 @@ func InitTables(db *gorm.DB) error {
 		&Interactive{},
 		&UserLikeBiz{},
 		&UserCollectionBiz{},
-		&AsyncSms{})
+		&AsyncSms{},
+		&Job{},
+	)
 }
 
 func InitCollection(mdb *mongo.Database) error {
