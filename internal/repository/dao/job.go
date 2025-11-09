@@ -22,15 +22,19 @@ type GORMJobDAO struct {
 func (g *GORMJobDAO) Preempt(ctx context.Context) (Job, error) {
 	db := g.db.WithContext(ctx)
 	for {
-		now := time.Now()
+		now := time.Now().UnixMilli()
 		var j Job
 		// 分布式任务调度系统
 		// 防止拿不到资源，不断循环执行db操作
 		// 1. 一次拉一批，我一次性取出 100 条来，然后，我随机从某一条开始，向后开始抢占
 		// 2. 我搞个随机偏移量，0-100 生成一个随机偏移量。兜底：第一轮没查到，偏移量回归到 0
 		// 3. 我搞一个 id 取余分配，status = ? AND next_time <=? AND id%10 = ? 兜底：不加余数条件，取next_time 最老的
-		err := db.WithContext(ctx).Where("status = ? AND next_time <=?", jobStatusWaiting, now).
-			First(&j).Error
+		// 查询条件：
+		// 1. 等待调度的任务：status = waiting AND next_time <= now
+		// 2. 续约失败的任务：status = running AND utime < (now - 3分钟)，表示曾经有人调度但续约失败
+		ddl := now - (time.Minute * 3).Milliseconds()
+		err := db.Where("(status = ? AND next_time <?) OR (status = ? AND utime < ?)",
+			jobStatusWaiting, now, jobStatusRunning, ddl).Error
 		// 你找到了，可以被抢占的
 		// 找到之后你要干嘛？你要抢占
 		if err != nil {
@@ -63,6 +67,7 @@ func (g *GORMJobDAO) Preempt(ctx context.Context) (Job, error) {
 func (g *GORMJobDAO) Release(ctx context.Context, id int64) error {
 	// 这里有一个问题。你要不要检测 status 或者 version?
 	// WHERE version = ?
+	// (但这种场景比较少，一般就是节点运行中，可能连不上数据库了，然后数据刚好被其他节点强占执行中；但是一旦连不上数据库，其他节点都也连不上的)
 	// 要。你们的作业记得修改
 	return g.db.WithContext(ctx).Model(&Job{}).Where("id =?", id).
 		Updates(map[string]any{

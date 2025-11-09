@@ -47,6 +47,8 @@ func (l *LocalFuncExecutor) RegisterFunc(name string, fn func(ctx context.Contex
 	l.funcs[name] = fn
 }
 
+//------------------------
+
 // Scheduler 调度器
 type Scheduler struct {
 	svc     service.JobService
@@ -56,7 +58,9 @@ type Scheduler struct {
 }
 
 func NewScheduler(svc service.JobService, l logger.LoggerV1) *Scheduler {
-	return &Scheduler{svc: svc, l: l,
+	return &Scheduler{
+		svc:     svc,
+		l:       l,
 		limiter: semaphore.NewWeighted(200), // 本地执行器的并发限制
 		execs:   make(map[string]Executor),
 	}
