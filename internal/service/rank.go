@@ -12,6 +12,7 @@ import (
 	"github.com/ecodeclub/ekit/slice"
 )
 
+//go:generate mockgen -source=./rank.go -package=svcmocks -destination=./mocks/rank.mock.go RankService
 type RankService interface {
 	TopN(ctx context.Context) error
 	GetTopN(ctx context.Context) ([]domain.Article, error)
