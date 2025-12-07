@@ -49,20 +49,6 @@ func (mr *MockInteractiveRepositoryMockRecorder) AddCollectionItem(ctx, biz, id,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCollectionItem", reflect.TypeOf((*MockInteractiveRepository)(nil).AddCollectionItem), ctx, biz, id, cid, uid)
 }
 
-// BatchIncrReadCnt mocks base method.
-func (m *MockInteractiveRepository) BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchIncrReadCnt", ctx, biz, bizId)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// BatchIncrReadCnt indicates an expected call of BatchIncrReadCnt.
-func (mr *MockInteractiveRepositoryMockRecorder) BatchIncrReadCnt(ctx, biz, bizId interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchIncrReadCnt", reflect.TypeOf((*MockInteractiveRepository)(nil).BatchIncrReadCnt), ctx, biz, bizId)
-}
-
 // Collected mocks base method.
 func (m *MockInteractiveRepository) Collected(ctx context.Context, biz string, id, uid int64) (bool, error) {
 	m.ctrl.T.Helper()
