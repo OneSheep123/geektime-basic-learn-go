@@ -90,17 +90,6 @@ func InitArticleHandler(dao3 dao.ArticleDAO) *web.ArticleHandler {
 	return articleHandler
 }
 
-func InitInteractiveService() service2.InteractiveService {
-	db := InitDB()
-	interactiveDAO := dao2.NewGORMInteractiveDAO(db)
-	loggerV1 := InitLogger()
-	cmdable := InitRedis()
-	interactiveCache := cache2.NewInteractiveRedisCache(cmdable)
-	interactiveRepository := repository2.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
-	interactiveService := service2.NewInteractiveService(interactiveRepository)
-	return interactiveService
-}
-
 // wire.go:
 
 var thirdPartySet = wire.NewSet(
