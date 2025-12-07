@@ -9,6 +9,7 @@ import (
 	"github.com/ecodeclub/ekit/slice"
 )
 
+//go:generate mockgen -source=./interactive.go -package=repomocks -destination=./mocks/interactive.mock.go InteractiveRepository
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	// BatchIncrReadCnt biz 和 bizId 长度必须一致
