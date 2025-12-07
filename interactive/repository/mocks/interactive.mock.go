@@ -2,11 +2,11 @@
 // Source: ./interactive.go
 
 // Package repomocks is a generated GoMock package.
-package repomocks
+package mocks
 
 import (
 	context "context"
-	domain "ddd_demo/internal/domain"
+	"ddd_demo/interactive/domain"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"

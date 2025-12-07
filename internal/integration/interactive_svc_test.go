@@ -1,9 +1,9 @@
 package integration
 
 import (
-	"ddd_demo/internal/domain"
+	"ddd_demo/interactive/domain"
+	"ddd_demo/interactive/repository/dao"
 	"ddd_demo/internal/integration/startup"
-	"ddd_demo/internal/repository/dao"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

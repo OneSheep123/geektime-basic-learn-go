@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"ddd_demo/internal/domain"
+	"ddd_demo/interactive/domain"
 	_ "embed"
 	"fmt"
 	"github.com/redis/go-redis/v9"

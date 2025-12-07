@@ -1,8 +1,9 @@
-package article
+package events
 
 import (
 	"context"
-	"ddd_demo/internal/repository"
+	"ddd_demo/interactive/repository"
+	"ddd_demo/internal/events/article"
 	"ddd_demo/pkg/logger"
 	"ddd_demo/pkg/samarax"
 	"github.com/IBM/sarama"
@@ -43,8 +44,8 @@ func (i *InteractiveReadEventConsumer) Start() error {
 	}
 	go func() {
 		er := cg.Consume(context.Background(),
-			[]string{TopicReadEvent},
-			samarax.NewHandler[ReadEvent](i.l, i.Consume))
+			[]string{article.TopicReadEvent},
+			samarax.NewHandler[article.ReadEvent](i.l, i.Consume))
 		if er != nil {
 			i.l.Error("退出消费", logger.Error(er))
 		}
@@ -66,7 +67,7 @@ func (i *InteractiveReadEventConsumer) Start() error {
 //}
 
 func (i *InteractiveReadEventConsumer) Consume(msg *sarama.ConsumerMessage,
-	event ReadEvent) error {
+	event article.ReadEvent) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	return i.repo.IncrReadCnt(ctx, "article", event.Aid)

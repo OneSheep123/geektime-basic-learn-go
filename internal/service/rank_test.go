@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	domain2 "ddd_demo/interactive/domain"
+	service2 "ddd_demo/interactive/service"
 	"ddd_demo/internal/domain"
 	svcmocks "ddd_demo/internal/service/mocks"
 	"github.com/golang/mock/gomock"
@@ -16,14 +18,14 @@ func TestBatchRankingService_TopN(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		mock func(ctrl *gomock.Controller) (InteractiveService, ArticleService)
+		mock func(ctrl *gomock.Controller) (service2.InteractiveService, ArticleService)
 
 		wantArts []domain.Article
 		wantErr  error
 	}{
 		{
 			name: "成功获取",
-			mock: func(ctrl *gomock.Controller) (InteractiveService, ArticleService) {
+			mock: func(ctrl *gomock.Controller) (service2.InteractiveService, ArticleService) {
 				intrSvc := svcmocks.NewMockInteractiveService(ctrl)
 				artSvc := svcmocks.NewMockArticleService(ctrl)
 				// 先模拟批量获取数据
@@ -46,21 +48,21 @@ func TestBatchRankingService_TopN(t *testing.T) {
 
 				// 第一批的点赞数据
 				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{1, 2}).
-					Return(map[int64]domain.Interactive{
+					Return(map[int64]domain2.Interactive{
 						1: {LikeCnt: 1},
 						2: {LikeCnt: 2},
 					}, nil)
 
 				// 第二批的点赞数据
 				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{3, 4}).
-					Return(map[int64]domain.Interactive{
+					Return(map[int64]domain2.Interactive{
 						3: {LikeCnt: 3},
 						4: {LikeCnt: 4},
 					}, nil)
 
 				// 第三批的点赞数据
 				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{}).
-					Return(map[int64]domain.Interactive{}, nil)
+					Return(map[int64]domain2.Interactive{}, nil)
 
 				return intrSvc, artSvc
 			},

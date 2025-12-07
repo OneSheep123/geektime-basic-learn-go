@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	service2 "ddd_demo/interactive/service"
 	"ddd_demo/internal/domain"
 	"ddd_demo/internal/repository"
 	"errors"
@@ -19,7 +20,7 @@ type RankService interface {
 }
 
 type BatchRankingService struct {
-	intrSvc   InteractiveService
+	intrSvc   service2.InteractiveService
 	artSvc    ArticleService
 	batchSize int
 	scoreFunc func(likeCnt int64, utime time.Time) float64
@@ -32,7 +33,7 @@ func (b *BatchRankingService) GetTopN(ctx context.Context) ([]domain.Article, er
 	return b.repo.GetTopN(ctx)
 }
 
-func NewBatchRankingService(intrSvc InteractiveService, artSvc ArticleService) RankService {
+func NewBatchRankingService(intrSvc service2.InteractiveService, artSvc ArticleService) RankService {
 	return &BatchRankingService{
 		intrSvc:   intrSvc,
 		artSvc:    artSvc,

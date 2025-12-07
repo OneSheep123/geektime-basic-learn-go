@@ -3,6 +3,11 @@
 package main
 
 import (
+	"ddd_demo/interactive/events"
+	repository2 "ddd_demo/interactive/repository"
+	cache2 "ddd_demo/interactive/repository/cache"
+	dao2 "ddd_demo/interactive/repository/dao"
+	service2 "ddd_demo/interactive/service"
 	"ddd_demo/internal/events/article"
 	"ddd_demo/internal/repository"
 	"ddd_demo/internal/repository/cache"
@@ -15,10 +20,10 @@ import (
 	"github.com/google/wire"
 )
 
-var interactiveSvcSet = wire.NewSet(dao.NewGORMInteractiveDAO,
-	cache.NewInteractiveRedisCache,
-	repository.NewCachedInteractiveRepository,
-	service.NewInteractiveService,
+var interactiveSvcSet = wire.NewSet(dao2.NewGORMInteractiveDAO,
+	cache2.NewInteractiveRedisCache,
+	repository2.NewCachedInteractiveRepository,
+	service2.NewInteractiveService,
 )
 
 var rankingSvcSet = wire.NewSet(
@@ -45,7 +50,7 @@ func InitWebServer() *App {
 		ioc.InitJobs,
 
 		article.NewSaramaSyncProducer,
-		article.NewInteractiveReadEventConsumer,
+		events.NewInteractiveReadEventConsumer,
 		ioc.InitConsumers,
 
 		// cache 部分

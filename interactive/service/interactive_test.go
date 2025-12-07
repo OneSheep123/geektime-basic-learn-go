@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"ddd_demo/internal/domain"
-	"ddd_demo/internal/repository"
-	repomocks "ddd_demo/internal/repository/mocks"
+	"ddd_demo/interactive/domain"
+	"ddd_demo/interactive/repository"
+	repomocks "ddd_demo/interactive/repository/mocks"
 	"errors"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

@@ -6,7 +6,7 @@ package svcmocks
 
 import (
 	context "context"
-	domain "ddd_demo/internal/domain"
+	"ddd_demo/interactive/domain"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"

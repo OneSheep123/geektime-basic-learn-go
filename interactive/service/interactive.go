@@ -2,9 +2,8 @@ package service
 
 import (
 	"context"
-	"ddd_demo/internal/domain"
-	"ddd_demo/internal/repository"
-
+	"ddd_demo/interactive/domain"
+	"ddd_demo/interactive/repository"
 	"golang.org/x/sync/errgroup"
 )
 

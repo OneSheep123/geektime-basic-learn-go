@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"ddd_demo/internal/domain"
-	"ddd_demo/internal/repository/cache"
-	"ddd_demo/internal/repository/dao"
+	"ddd_demo/interactive/domain"
+	"ddd_demo/interactive/repository/cache"
+	"ddd_demo/interactive/repository/dao"
 	"ddd_demo/pkg/logger"
 	"github.com/ecodeclub/ekit/slice"
 )
