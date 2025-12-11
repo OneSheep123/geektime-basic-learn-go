@@ -9,7 +9,7 @@ db:
 
 kafka:
   addr:
-    - "localhost:9094"
+    - "127.0.0.1:9094"
 
 grpc:
   server:

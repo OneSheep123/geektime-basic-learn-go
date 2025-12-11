@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	initViperV1()
+	initViperWatch()
 	initLogger()
 	app := InitWebServer()
 	initPrometheus()
@@ -33,7 +33,7 @@ func main() {
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "hello，启动成功了！")
 	})
-	server.Run(":8080")
+	server.Run(":8083")
 }
 
 func initPrometheus() {
@@ -68,7 +68,7 @@ func initViper() {
 
 func initViperWatch() {
 	cfile := pflag.String("config",
-		"config/config.yaml", "配置文件路径")
+		"config/dev.yaml", "配置文件路径")
 	// 这一步之后，cfile 里面才有值
 	pflag.Parse()
 	//viper.Set("db.dsn", "localhost:3306")
@@ -76,9 +76,6 @@ func initViperWatch() {
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(*cfile)
 	viper.WatchConfig()
-	viper.OnConfigChange(func(in fsnotify.Event) {
-		log.Println(viper.GetString("test.key"))
-	})
 	// 读取配置
 	err := viper.ReadInConfig()
 	if err != nil {
