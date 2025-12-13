@@ -1,61 +1,118 @@
-# 项目名称：geektime-basic-learn-go
+# geektime-basic-learn-go
 
 ## 项目简介
 
-本项目是一个基于Go语言的后端服务示例，学习极客时间初级Go训练营，采用整洁架构和领域驱动设计（DDD）思想，适合学习和实践现代后端开发。项目主要实现了用户注册、登录、文章管理等基础功能，代码结构清晰，易于维护和扩展。
+本项目是基于 Go 语言开发的后端服务示例，采用整洁架构和领域驱动设计（DDD）思想构建。项目实现了用户系统、文章管理等核心功能，展示了现代 Go 后端开发的最佳实践。
 
-## 主要功能
+## 核心功能
 
 - 用户注册、登录（支持邮箱和短信验证码登录）
 - 用户信息编辑与查询
 - 文章的创建、编辑、发布、撤回、查询
-- 基于Gin框架的RESTful API
-- 配置灵活，支持本地和远程配置中心
-- 日志、限流等中间件支持
+- 基于 JWT 的身份验证
+- 文章互动功能（点赞、收藏等）
+- 分布式任务调度
+- 基于 gRPC 的微服务通信
+- 配置灵活，支持本地和远程配置中心（ETCD）
+- 集成 Prometheus 监控指标
+- 使用 Kafka 进行事件驱动架构
+- 支持分布式限流
+
+## 技术栈
+
+- **语言**: Go 1.23+
+- **Web框架**: Gin v1.10.0
+- **ORM框架**: GORM v1.30.0
+- **配置管理**: Viper v1.20.1
+- **日志系统**: Zap v1.27.0
+- **数据库**: MySQL 8.0, MongoDB 6.0
+- **缓存**: Redis
+- **消息队列**: Kafka
+- **监控**: Prometheus
+- **配置中心**: ETCD
+- **微服务通信**: gRPC v1.67.3
+- **其他**: Docker, Wire DI
 
 ## 目录结构
 
 ```
 .
-├── main.go              // 程序入口
-├── config/              // 配置文件目录
-│   └── dev.yaml         // 本地开发配置
-├── internal/            // 业务核心代码
-│   ├── domain/          // 领域模型
-│   ├── repository/      // 数据访问层
-│   ├── service/         // 业务服务层
-│   └── web/             // API接口与路由
-├── pkg/                 // 通用工具包
-├── go.mod               // 依赖管理
-└── ...
+├── api/                  // Proto 定义文件
+│   └── proto/
+├── config/               // 配置文件目录
+│   └── dev.yaml          // 本地开发配置
+├── cronjob/              // 定时任务示例
+├── grpc/                 // gRPC 相关代码
+├── interactive/          // 互动服务（微服务）
+├── internal/             // 业务核心代码
+│   ├── domain/           // 领域模型
+│   ├── repository/       // 数据访问层
+│   ├── service/          // 业务服务层
+│   ├── web/              // API 接口与路由
+│   ├── events/           // 事件处理
+│   ├── job/              // 任务调度
+│   └── integration/      // 集成测试
+├── ioc/                  // 依赖注入配置
+├── pkg/                  // 通用工具包
+├── sarama/               // Kafka 示例
+├── main.go               // 程序入口
+├── docker-compose.yaml   // 开发环境依赖
+├── go.mod                // 依赖管理
+└── wire.go               // Wire 依赖注入配置
 ```
+
+## 环境要求
+
+- Go 1.23+
+- Docker & Docker Compose
 
 ## 快速开始
 
-1. **安装依赖**
+1. **启动依赖服务**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **安装依赖**
 
    ```bash
    go mod tidy
    ```
 
-2. **配置数据库和Redis**
+3. **配置数据库**
 
-   修改 `config/dev.yaml`，配置你的数据库和Redis连接信息：
+   修改 `config/dev.yaml`，配置你的数据库连接信息：
 
    ```yaml
    db:
-     dsn: "root:root@tcp(localhost:3306)/webook"
+     dsn: "root:123123@tcp(localhost:3306)/webook"
    redis:
      addr: "localhost:6379"
+   kafka:
+     addr:
+       - "127.0.0.1:9094"
+   grpc:
+     client:
+       intr:
+         addr: "localhost:8090"
+         threshold: 100
    ```
 
-3. **运行项目**
+4. **运行主服务**
 
    ```bash
    go run main.go
    ```
 
-   启动后访问 [http://localhost:8080/hello](http://localhost:8080/hello) ，看到"hello，启动成功了！"说明服务启动成功。
+   启动后访问 [http://localhost:8083/hello](http://localhost:8083/hello) ，看到"hello，启动成功了！"说明服务启动成功。
+
+5. **运行互动服务（可选）**
+
+   ```bash
+   cd interactive
+   go run main.go
+   ```
 
 ## 主要接口示例
 
@@ -76,30 +133,37 @@
 - 查询文章详情：`GET /articles/detail/:id`
 - 查询文章列表：`POST /articles/list`
 
-## 配置说明
+### 互动相关
 
-`config/dev.yaml` 示例：
+- 点赞：`POST /interactive/like`
+- 收藏：`POST /interactive/collect`
+- 获取互动信息：`GET /interactive/detail`
 
-```yaml
-test:
-  key: value1234
+## 开发说明
 
-redis:
-  addr: "localhost:6379"
+### 依赖服务
 
-db:
-  dsn: "root:root@tcp(localhost:3306)/webook"
+项目依赖以下服务，可通过 `docker-compose up -d` 一键启动：
+
+- MySQL 8.0 (端口 13316)
+- Redis (端口 6379)
+- MongoDB 6.0 (端口 27017)
+- Kafka (端口 9094)
+- Prometheus (端口 9090)
+- ETCD (端口 12379)
+
+### 配置文件
+
+主要配置在 `config/dev.yaml` 文件中，支持热重载。
+
+### 依赖注入
+
+项目使用 Google Wire 进行依赖注入，修改依赖关系后需要运行：
+
+```bash
+go generate ./...
 ```
-
-## 依赖技术
-
-- Go 1.23+
-- Gin Web框架
-- GORM ORM
-- Viper 配置管理
-- Zap 日志
-- MySQL、Redis、MongoDB
 
 ## 贡献与反馈
 
-如有问题或建议，欢迎提Issue或直接联系项目维护者。 
+如有问题或建议，欢迎提 Issue 或直接联系项目维护者。
