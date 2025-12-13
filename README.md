@@ -56,6 +56,7 @@
 ├── pkg/                  // 通用工具包
 ├── sarama/               // Kafka 示例
 ├── main.go               // 程序入口
+├── buf.gen.yaml          // Buf 代码生成配置
 ├── docker-compose.yaml   // 开发环境依赖
 ├── go.mod                // 依赖管理
 └── wire.go               // Wire 依赖注入配置
@@ -65,6 +66,7 @@
 
 - Go 1.23+
 - Docker & Docker Compose
+- Buf CLI (用于 protobuf 代码生成)
 
 ## 快速开始
 
@@ -99,7 +101,13 @@
          threshold: 100
    ```
 
-4. **运行主服务**
+4. **生成 gRPC 代码**
+
+   ```bash
+   buf generate api/proto
+   ```
+
+5. **运行主服务**
 
    ```bash
    go run main.go
@@ -107,7 +115,7 @@
 
    启动后访问 [http://localhost:8083/hello](http://localhost:8083/hello) ，看到"hello，启动成功了！"说明服务启动成功。
 
-5. **运行互动服务（可选）**
+6. **运行互动服务（可选）**
 
    ```bash
    cd interactive
@@ -163,6 +171,20 @@
 ```bash
 go generate ./...
 ```
+
+### Protobuf 代码生成
+
+项目使用 Buf 工具进行 protobuf 代码生成，配置文件为 `buf.gen.yaml`：
+
+- `buf.gen.yaml`: 定义了 protobuf 代码生成的插件和输出路径
+- API 定义文件位于 `api/proto/` 目录下
+
+生成命令：
+```bash
+buf generate api/proto
+```
+
+该命令会根据 `buf.gen.yaml` 的配置生成 Go 代码和 gRPC 代码到 `api/proto/gen` 目录。
 
 ## 贡献与反馈
 
