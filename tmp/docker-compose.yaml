@@ -1,0 +1,40 @@
+version: "3"
+services:
+  kafka:
+    image: docker.io/confluentinc/cp-kafka
+    container_name: kafka
+    restart: always
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      # --- KRaft 模式 ---
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      
+      # --- Listener 配置 ---
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      
+      # --- 本地开发配置 ---
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      
+      # --- 副本因子配置 ---
+      # 设置默认副本因子为 1，适用于单节点集群
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      
+      # --- 时间戳配置 ---
+      # 允许更大的时间戳差异范围
+      KAFKA_LOG_MESSAGE_TIMESTAMP_DIFFERENCE_MAX_MS: 3600000
+      # 或者禁用时间戳检查
+      KAFKA_LOG_MESSAGE_TIMESTAMP_TYPE: "CreateTime"
+      
+      # --- Confluent 必须指定 ---
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"

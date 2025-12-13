@@ -85,9 +85,10 @@ func (b *BatchRankingService) topN(ctx context.Context) ([]domain.Article, error
 		if err != nil {
 			return nil, err
 		}
-		//if len(arts) == 0 {
-		//	break
-		//}
+		// 如果没有数据了，就跳出循环
+		if len(arts) == 0 {
+			break
+		}
 		ids := slice.Map(arts, func(idx int, art domain.Article) int64 {
 			return art.Id
 		})
@@ -100,11 +101,12 @@ func (b *BatchRankingService) topN(ctx context.Context) ([]domain.Article, error
 		}
 		intrMap := intrResp.Intrs
 		for _, art := range arts {
-			intr := intrMap[art.Id]
-			//intr, ok := intrMap[art.Id]
-			//if !ok {
-			//	continue
-			//}
+			// 检查是否有互动数据
+			intr, ok := intrMap[art.Id]
+			if !ok {
+				// 如果没有互动数据，则跳过该文章
+				continue
+			}
 			score := b.scoreFunc(intr.LikeCnt, art.Utime)
 			ele := Score{
 				score: score,

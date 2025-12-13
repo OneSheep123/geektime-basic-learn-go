@@ -1,9 +1,12 @@
 package sarama
 
 import (
+	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
+
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var addr = []string{"localhost:9094"}
@@ -11,18 +14,22 @@ var addr = []string{"localhost:9094"}
 func TestSyncProducer(t *testing.T) {
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
-	producer, err := sarama.NewSyncProducer(addr, cfg)
 	cfg.Producer.Partitioner = sarama.NewRoundRobinPartitioner
-	//cfg.Producer.Partitioner = sarama.NewRandomPartitioner
-	//cfg.Producer.Partitioner = sarama.NewHashPartitioner
-	//cfg.Producer.Partitioner = sarama.NewManualPartitioner
-	//cfg.Producer.Partitioner = sarama.NewConsistentCRCHashPartitioner
-	//cfg.Producer.Partitioner = sarama.NewCustomPartitioner()
+
+	// 添加时间戳相关配置
+	cfg.Producer.RequiredAcks = sarama.WaitForAll
+	cfg.Producer.Retry.Max = 5
+	// 设置时间戳类型
+	cfg.Version = sarama.V3_6_0_0
+
+	producer, err := sarama.NewSyncProducer(addr, cfg)
 	assert.NoError(t, err)
+
 	for i := 0; i < 100; i++ {
-		_, _, err = producer.SendMessage(&sarama.ProducerMessage{
-			Topic: "test_topic",
-			Value: sarama.StringEncoder("这是一条消息"),
+		_, _, er := producer.SendMessage(&sarama.ProducerMessage{
+			Topic:     "test_topic",
+			Value:     sarama.StringEncoder("这是一条消息"),
+			Timestamp: time.Now(), // 显式设置时间戳
 			// 会在生产者和消费者之间传递的
 			Headers: []sarama.RecordHeader{
 				{
@@ -32,6 +39,7 @@ func TestSyncProducer(t *testing.T) {
 			},
 			Metadata: "这是 metadata",
 		})
+		require.NoError(t, er)
 	}
 }
 
@@ -39,12 +47,15 @@ func TestAsyncProducer(t *testing.T) {
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
 	cfg.Producer.Return.Errors = true
+	cfg.Version = sarama.V3_6_0_0 // 设置版本
+
 	producer, err := sarama.NewAsyncProducer(addr, cfg)
 	assert.NoError(t, err)
 	msgs := producer.Input()
 	msgs <- &sarama.ProducerMessage{
-		Topic: "test_topic",
-		Value: sarama.StringEncoder("这是一条消息"),
+		Topic:     "test_topic",
+		Value:     sarama.StringEncoder("这是一条消息"),
+		Timestamp: time.Now(), // 显式设置时间戳
 		// 会在生产者和消费者之间传递的
 		Headers: []sarama.RecordHeader{
 			{

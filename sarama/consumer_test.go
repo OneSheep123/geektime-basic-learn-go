@@ -12,7 +12,8 @@ import (
 
 func TestConsumer(t *testing.T) {
 	cfg := sarama.NewConfig()
-	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
+	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest // 设置时间戳类型
+	cfg.Version = sarama.V3_6_0_0
 	consumer, err := sarama.NewConsumerGroup(addr, "demo", cfg)
 	assert.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
