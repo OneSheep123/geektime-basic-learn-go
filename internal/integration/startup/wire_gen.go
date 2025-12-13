@@ -53,7 +53,8 @@ func InitWebServer() *gin.Engine {
 	interactiveCache := cache2.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository2.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
 	interactiveService := service2.NewInteractiveService(interactiveRepository)
-	articleHandler := web.NewArticleHandler(loggerV1, articleService, interactiveService)
+	interactiveServiceClient := ioc.InitIntrClient(interactiveService)
+	articleHandler := web.NewArticleHandler(loggerV1, articleService, interactiveServiceClient)
 	wechatService := InitWechatService(loggerV1)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, handler, userService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler, oAuth2WechatHandler)
@@ -86,7 +87,8 @@ func InitArticleHandler(dao3 dao.ArticleDAO) *web.ArticleHandler {
 	interactiveCache := cache2.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository2.NewCachedInteractiveRepository(interactiveDAO, loggerV1, interactiveCache)
 	interactiveService := service2.NewInteractiveService(interactiveRepository)
-	articleHandler := web.NewArticleHandler(loggerV1, articleService, interactiveService)
+	interactiveServiceClient := ioc.InitIntrClient(interactiveService)
+	articleHandler := web.NewArticleHandler(loggerV1, articleService, interactiveServiceClient)
 	return articleHandler
 }
 
@@ -102,4 +104,4 @@ var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository
 
 var articlSvcProvider = wire.NewSet(repository.NewCachedArticleRepository, cache.NewArticleRedisCache, dao.NewArticleGORMDAO, service.NewArticleService)
 
-var interactiveSvcSet = wire.NewSet(dao2.NewGORMInteractiveDAO, cache2.NewInteractiveRedisCache, repository2.NewCachedInteractiveRepository, service2.NewInteractiveService)
+var interactiveSvcSet = wire.NewSet(dao2.NewGORMInteractiveDAO, cache2.NewInteractiveRedisCache, repository2.NewCachedInteractiveRepository, service2.NewInteractiveService, ioc.InitIntrClient)

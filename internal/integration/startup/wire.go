@@ -44,6 +44,7 @@ var interactiveSvcSet = wire.NewSet(dao2.NewGORMInteractiveDAO,
 	cache2.NewInteractiveRedisCache,
 	repository2.NewCachedInteractiveRepository,
 	service2.NewInteractiveService,
+	ioc.InitIntrClient,
 )
 
 func InitWebServer() *gin.Engine {
