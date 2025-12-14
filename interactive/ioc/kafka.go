@@ -2,7 +2,9 @@ package ioc
 
 import (
 	events2 "ddd_demo/interactive/events"
+	"ddd_demo/interactive/repository/dao"
 	"ddd_demo/internal/events"
+	"ddd_demo/pkg/migrator/events/fixer"
 	"github.com/IBM/sarama"
 	"github.com/spf13/viper"
 	"time"
@@ -42,6 +44,14 @@ func InitSaramaClient() sarama.Client {
 	return client
 }
 
-func InitConsumers(c1 *events2.InteractiveReadEventConsumer) []events.Consumer {
-	return []events.Consumer{c1}
+func InitSaramaSyncProducer(client sarama.Client) sarama.SyncProducer {
+	p, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func InitConsumers(c1 *events2.InteractiveReadEventConsumer, fixConsumer *fixer.Consumer[dao.Interactive]) []events.Consumer {
+	return []events.Consumer{c1, fixConsumer}
 }

@@ -2,10 +2,12 @@ package main
 
 import (
 	"ddd_demo/internal/events"
+	"ddd_demo/pkg/ginx"
 	"ddd_demo/pkg/grpcx"
 )
 
 type App struct {
-	consumers []events.Consumer
-	server    *grpcx.Server
+	consumers   []events.Consumer
+	server      *grpcx.Server
+	adminServer *ginx.Server
 }
