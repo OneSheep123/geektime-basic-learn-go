@@ -24,7 +24,7 @@ type Validator[T migrator.Entity] struct {
 	// <= 0 就认为中断
 	// > 0 就认为睡眠
 	sleepInterval time.Duration
-	fromBase      func(ctx context.Context, offset int) (T, error)
+	fromBase      func(ctx context.Context, offset int, limit *int) ([]T, error)
 }
 
 func NewValidator[T migrator.Entity](
@@ -59,7 +59,7 @@ func (v *Validator[T]) Validate(ctx context.Context) error {
 func (v *Validator[T]) validateBaseToTarget(ctx context.Context) error {
 	offset := 0
 	for {
-		src, err := v.fromBase(ctx, offset)
+		srcList, err := v.fromBase(ctx, offset, nil)
 		if err == context.DeadlineExceeded || err == context.Canceled {
 			return nil
 		}
@@ -79,6 +79,8 @@ func (v *Validator[T]) validateBaseToTarget(ctx context.Context) error {
 			offset++
 			continue
 		}
+
+		src := srcList[0]
 
 		// 这边就是正常情况
 		var dst T
@@ -107,6 +109,74 @@ func (v *Validator[T]) validateBaseToTarget(ctx context.Context) error {
 	}
 }
 
+// 批量写法
+func (v *Validator[T]) validateBaseToTargetV1(ctx context.Context) error {
+	offset := 0
+	limit := 100
+	for {
+		srcList, err := v.fromBase(ctx, offset, &limit)
+		if err == context.DeadlineExceeded || err == context.Canceled {
+			return nil
+		}
+		if err == gorm.ErrRecordNotFound {
+			// 你增量校验，要考虑一直运行的
+			// 这个就是咩有数据
+			if v.sleepInterval <= 0 {
+				return nil
+			}
+			time.Sleep(v.sleepInterval)
+			continue
+		}
+		if err != nil {
+			// 查询出错了
+			v.l.Error("base -> target 查询 base 失败", logger.Error(err))
+			// 在这里，
+			offset += limit
+			continue
+		}
+
+		srcIds := slice.Map(srcList, func(idx int, t T) int64 {
+			return t.ID()
+		})
+
+		// 这边就是正常情况
+		var dstList []T
+		err = v.target.WithContext(ctx).
+			Where("id in ?", srcIds).
+			Find(&dstList).Error
+		switch err {
+		case gorm.ErrRecordNotFound:
+			// target 没有
+			// 丢一条消息到 Kafka 上
+			for _, src := range srcList {
+				v.notify(src.ID(), events.InconsistentEventTypeBaseMissing)
+			}
+		case nil:
+			dstMap := make(map[int64]T)
+			for _, dst := range dstList {
+				dstMap[dst.ID()] = dst
+			}
+			for _, src := range srcList {
+				if dst, ok := dstMap[src.ID()]; ok {
+					equal := src.CompareTo(dst)
+					if !equal {
+						// 要丢一条消息到 Kafka 上
+						v.notify(src.ID(), events.InconsistentEventTypeNEQ)
+					}
+				} else {
+					// target 没有
+					// 丢一条消息到 Kafka 上
+					v.notify(src.ID(), events.InconsistentEventTypeBaseMissing)
+				}
+			}
+		default:
+			// 记录日志，然后继续
+			// 做好监控
+		}
+		offset += len(srcList)
+	}
+}
+
 func (v *Validator[T]) Full() *Validator[T] {
 	v.fromBase = v.fullFromBase
 	return v
@@ -127,23 +197,31 @@ func (v *Validator[T]) SleepInterval(interval time.Duration) *Validator[T] {
 	return v
 }
 
-func (v *Validator[T]) fullFromBase(ctx context.Context, offset int) (T, error) {
+func (v *Validator[T]) fullFromBase(ctx context.Context, offset int, limit *int) ([]T, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	var src T
-	err := v.base.WithContext(dbCtx).Order("id").
-		Offset(offset).First(&src).Error
+	var src []T
+	query := v.base.WithContext(dbCtx).Order("id").
+		Offset(offset)
+	if limit != nil {
+		query = query.Limit(*limit)
+	}
+	err := query.Find(&src).Error
 	return src, err
 }
 
-func (v *Validator[T]) incrFromBase(ctx context.Context, offset int) (T, error) {
+func (v *Validator[T]) incrFromBase(ctx context.Context, offset int, limit *int) ([]T, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	var src T
-	err := v.base.WithContext(dbCtx).
+	var src []T
+	query := v.base.WithContext(dbCtx).
 		Where("utime > ?", v.utime).
 		Order("utime").
-		Offset(offset).First(&src).Error
+		Offset(offset)
+	if limit != nil {
+		query = query.Limit(*limit)
+	}
+	err := query.Find(&src).Error
 	return src, err
 }
 
