@@ -3,7 +3,6 @@
 package main
 
 import (
-	"ddd_demo/interactive/events"
 	repository2 "ddd_demo/interactive/repository"
 	cache2 "ddd_demo/interactive/repository/cache"
 	dao2 "ddd_demo/interactive/repository/dao"
@@ -37,6 +36,7 @@ func InitWebServer() *App {
 		// 第三方依赖
 		ioc.InitRedis, ioc.InitDB,
 		ioc.InitLogger,
+		ioc.InitEtcd,
 		ioc.InitSaramaClient,
 		ioc.InitSyncProducer,
 		ioc.InitRlockClient,
@@ -44,14 +44,15 @@ func InitWebServer() *App {
 		dao.NewUserDAO,
 		dao.NewArticleGORMDAO,
 
-		interactiveSvcSet,
-		ioc.InitIntrClient,
+		//interactiveSvcSet,
+		//ioc.InitIntrClient,
+		ioc.InitIntrClientV1,
 		rankingSvcSet,
 		ioc.InitRankingJob,
 		ioc.InitJobs,
 
 		article.NewSaramaSyncProducer,
-		events.NewInteractiveReadEventConsumer,
+		//events.NewInteractiveReadEventConsumer,
 		ioc.InitConsumers,
 
 		// cache 部分
