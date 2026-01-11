@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	_ "ddd_demo/pkg/grpcx/balancer/wrr" // 自定义加权负载均衡算法
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	etcdv3 "go.etcd.io/etcd/client/v3"
@@ -26,6 +27,33 @@ func (s *BalancerTestSuite) SetupSuite() {
 	// etcdv3.New(etcdv3.Config{Endpoints: })
 	require.NoError(s.T(), err)
 	s.cli = cli
+}
+
+func (s *BalancerTestSuite) TestClientCustomWRR() {
+	t := s.T()
+	etcdResolver, err := resolver.NewBuilder(s.cli)
+	require.NoError(s.T(), err)
+	cc, err := grpc.Dial("etcd:///service/user",
+		grpc.WithResolvers(etcdResolver),
+		grpc.WithDefaultServiceConfig(`
+{
+    "loadBalancingConfig": [
+        {
+            "custom_weighted_round_robin": {}
+        }
+    ]
+}
+`),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	client := NewUserServiceClient(cc)
+	for i := 0; i < 10; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		resp, err := client.GetByID(ctx, &GetByIDRequest{Id: 123})
+		cancel()
+		require.NoError(t, err)
+		t.Log(resp.User)
+	}
 }
 
 func (s *BalancerTestSuite) TestClientWRR() {
