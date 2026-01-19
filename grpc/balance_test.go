@@ -29,6 +29,47 @@ func (s *BalancerTestSuite) SetupSuite() {
 	s.cli = cli
 }
 
+// failover 机制
+func (s *BalancerTestSuite) TestFailoverClient() {
+	t := s.T()
+	etcdResolver, err := resolver.NewBuilder(s.cli)
+	require.NoError(s.T(), err)
+	cc, err := grpc.Dial("etcd:///service/user",
+		grpc.WithResolvers(etcdResolver),
+		grpc.WithDefaultServiceConfig(`
+{
+  "loadBalancingConfig": [{"round_robin": {}}],
+  "methodConfig":  [
+    {
+      "name": [{"service":  "UserService"}],
+      "retryPolicy": {
+        "maxAttempts": 4,
+        "initialBackoff": "0.01s",
+        "maxBackoff": "0.1s",
+        "backoffMultiplier": 2.0,
+        "retryableStatusCodes": ["UNAVAILABLE"]
+      }
+    }
+  ]
+}
+`),
+		//	"maxAttempts": 最大尝试次数（包括初始调用和后续重试），这里是4次
+		//"initialBackoff": 初始退避时间，首次重试前等待0.01秒
+		//"maxBackoff": 最大退避时间，重试间隔不会超过0.1秒
+		//"backoffMultiplier": 退避乘数，每次重试间隔按此倍数递增（这里是2.0，即每次翻倍）
+		//"retryableStatusCodes": 可重试的状态码列表，只有UNAVAILABLE状态才会触发重试
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	client := NewUserServiceClient(cc)
+	for i := 0; i < 10; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		resp, err := client.GetByID(ctx, &GetByIDRequest{Id: 123})
+		cancel()
+		require.NoError(t, err)
+		t.Log(resp.User)
+	}
+}
+
 func (s *BalancerTestSuite) TestClientCustomWRR() {
 	t := s.T()
 	etcdResolver, err := resolver.NewBuilder(s.cli)
@@ -121,8 +162,13 @@ func (s *BalancerTestSuite) TestServer() {
 			Name: ":8091",
 		})
 	}()
-	s.startServer(":8092", 30, &Server{
-		Name: ":8092",
+	go func() {
+		s.startServer(":8092", 30, &Server{
+			Name: ":8092",
+		})
+	}()
+	s.startServer(":8093", 30, &FailedServer{
+		Name: ":8093",
 	})
 }
 
