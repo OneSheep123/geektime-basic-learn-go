@@ -6,6 +6,7 @@ import (
 	"ddd_demo/internal/domain"
 	"ddd_demo/internal/repository/cache"
 	"ddd_demo/internal/repository/dao"
+	"errors"
 	"log"
 	"time"
 )
@@ -157,6 +158,11 @@ func (repo *CachedUserRepository) FindById(ctx context.Context, uid int64) (doma
 	// 只要 err 为 nil，就返回
 	if err == nil {
 		return du, nil
+	}
+
+	// 检测限流/熔断/降级标记位
+	if ctx.Value("downgrade") == "true" {
+		return du, errors.New("触发降级，不再查询数据库")
 	}
 
 	// err 不为 nil，就要查询数据库

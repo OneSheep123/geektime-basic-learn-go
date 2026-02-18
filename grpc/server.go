@@ -11,7 +11,7 @@ func (s *Server) GetByID(ctx context.Context, request *GetByIDRequest) (*GetByID
 	return &GetByIDResponse{
 		User: &User{
 			Id:   123,
-			Name: "from" + s.Name,
+			Name: "from---" + s.Name,
 		},
 	}, nil
 }
